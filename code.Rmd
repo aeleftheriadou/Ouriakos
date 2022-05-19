@@ -12,13 +12,30 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 ```{r}
 library(readr)
 library(ggplot2)
+library (tidyverse)
 
-data <- read_csv('C:/Users/anasi/Documents/GitHub/Ouriakos/analysis/data/raw_data/rk_db.csv')
+data <- read_csv('./analysis/data/raw_data/rk_db.csv')
 
 chisq.test(data$typology, data$material )
-df <- as.data.frame(data)
 
-ggplot(df, aes(x=length)) + geom_histogram()
+table(data$typology, data$material)
+data_combined<- as.data.frame(table(data$material, data$material))
+data_combined<- data_combined %>% 
+  pivot_wider(names_from = Var2, values_from = Freq) %>% 
+  mutate(Q=Q1+ Q2+ Q3+Q4) %>% 
+  select(Var1, BJ, GJ, RJ, Q)
+
+
+
+
+data %>% 
+  filter(typology %in% c('blade', 'f_blade')) %>% 
+  ggplot(aes(x=length)) + geom_histogram()
+
+
+
+
+ggplot(data, aes(x=length)) + geom_histogram()
 
 
 ```
