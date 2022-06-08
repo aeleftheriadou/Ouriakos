@@ -14,7 +14,7 @@ library(readr)
 library(ggplot2)
 library (tidyverse)
 
-data <- read_csv('./analysis/data/raw_data/rk_db.csv')
+data <- read_csv('./analysis/data/raw_data/bd.csv')
 
 chisq.test(data$typology, data$material )
 
@@ -32,7 +32,12 @@ data %>%
   filter(typology %in% c('blade', 'f_blade')) %>% 
   ggplot(aes(x=length)) + geom_histogram()
 
+tab_count<- data %>% 
+  group_by(typology) %>% 
+  summarise(counts=n()) %>% 
+  mutate('%'= counts/sum(counts)*100, digits=2)
 
+print(tab_count)
 
 
 ggplot(data, aes(x=length)) + geom_histogram()
