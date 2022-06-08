@@ -14,7 +14,7 @@ library(readr)
 library(ggplot2)
 library (tidyverse)
 
-data <- read_csv('./analysis/data/raw_data/bd.csv')
+data <- read_csv('./analysis/data/raw_data/database.csv')
 
 chisq.test(data$typology, data$material )
 
