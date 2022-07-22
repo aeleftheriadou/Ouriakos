@@ -13,35 +13,89 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 library(readr)
 library(ggplot2)
 library (tidyverse)
+library (stats)
+library(ggstatsplot)
+library(corrplot)
 
+
+#import csv data
 data <- read_csv('./analysis/data/raw_data/database.csv')
 
-chisq.test(data$typology, data$material )
 
-table(data$typology, data$material)
-data_combined<- as.data.frame(table(data$material, data$material))
-data_combined<- data_combined %>% 
-  pivot_wider(names_from = Var2, values_from = Freq) %>% 
-  mutate(Q=Q1+ Q2+ Q3+Q4) %>% 
-  select(Var1, BJ, GJ, RJ, Q)
+#remove NA and create binary data for cortex and burnt
+data$cortex[is.na(data$cortex)] <- 0
+data$burnt[is.na(data$burnt)] <- 0
+data$burnt[data$burnt == "Y"] <- 1
+data$cortex[data$cortex >1] <- 1
+
+#set as numeric
+data$burnt<- as.numeric(data$burnt)
+data$cortex<- as.numeric(data$cortex)
+
+#logistic regression of binary data + categorical data
+fit<- glm(data$cortex~ data$typology)
+summary (fit)
+
+###############################fisher test- same as chi-squared but for smaller sample sizes (<1000)
+test<- fisher.test(data$burnt, data$typology, simulate.p.value=TRUE)
+
+fisher<- ggbarstats(
+  data, burnt, typology,
+  results.subtitle = FALSE,
+  subtitle = paste0(
+    "Fisher's exact test", ", p-value = ",
+    ifelse(test$p.value < 0.001, "< 0.001", round(test$p.value, 3))
+  )
+)
+
+plot(fisher)
+
+
+#boxplot of length and thickness 
+boxplot(data$length~ data$thickness, ylab="length", xlab= "thickness", col="light blue",data = data, main='Association of length and thickness')
 
 
 
+# I set burnt and cortex data as binary because they are very fragmented and there was no
+#reason keeping them as continuous with many NAs.The most common analysis in this case is logistic Regression that is a #regression model in which the response variable (dependent variable) has categorical values such as True/False or 0/1.
+#Unfortunately, my data do not show any significant trend.
 
-data %>% 
-  filter(typology %in% c('blade', 'f_blade')) %>% 
-  ggplot(aes(x=length)) + geom_histogram()
+ggplot(data, aes(x=data$width, y=data$burnt)) + 
+  geom_point(alpha=.5) +
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial),
+  col="red", lty=2)+
+  ggtitle("Logistic regression: correlation between burning and width of the lithics")
 
-tab_count<- data %>% 
-  group_by(typology) %>% 
-  summarise(counts=n()) %>% 
+
+
+######################################## χ-squared test for cortex and typology
+#used the parameter simulate.p.value = TRUE to run it as a Fisher's exact test.
+chi<- chisq.test(data$cortex, data$typology, simulate.p.value = TRUE)
+# print Pearson residuals
+corrplot(chi$residuals, is.cor = FALSE)
+mtext("Pearson residuals", at=2.5, line=-0.5, cex=2)
+
+# Contibution in percentage (%)
+contrib <- 100*chi$residuals^2/chi$statistic
+corrplot(contrib, is.cor = FALSE)
+mtext("Contibution of Pearson residuals (%)", at=5, line=-0.5, cex=2)
+
+
+#compare the the length of blades and bladelets along with their counts to see any potential differences
+blades_hist<- data %>%
+  filter(typology %in% c('bladelet', 'blade')) %>%
+  ggplot(aes(x=length, fill = typology))+ geom_histogram()+
+  ggtitle("Distrubution of lengths in blades and bladelets")
+
+print(blades_hist)
+
+#check the percentage of the typological categories in the assemblage
+tab_count<- data %>%
+  group_by(typology) %>%
+  summarise(counts=n()) %>%
   mutate('%'= counts/sum(counts)*100, digits=2)
 
 print(tab_count)
-
-
-ggplot(data, aes(x=length)) + geom_histogram()
-
 
 ```
 
